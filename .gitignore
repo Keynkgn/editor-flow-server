@@ -1,0 +1,11 @@
+# Ignorar todo excepto el bot
+*
+.*
+!.gitignore
+
+# Permitir archivos del bot
+!bot.py
+!dashboard.html
+!requirements.txt
+!railway.toml
+!.env.example

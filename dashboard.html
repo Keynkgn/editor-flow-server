@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMC Bot — BingX Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:      #0d0f14;
+    --card:    #161922;
+    --border:  #252a35;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --yellow:  #f59e0b;
+    --blue:    #3b82f6;
+    --purple:  #8b5cf6;
+    --accent:  #0ea5e9;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  .logo-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  #last-update { color: var(--muted); }
+  .cb-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .5px;
+  }
+  .cb-ok   { background: rgba(34,197,94,.15);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .cb-warn { background: rgba(239,68,68,.15);   color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
+
+  /* ── LAYOUT ── */
+  main {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    display: grid;
+    gap: 20px;
+  }
+
+  .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .row-1 { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+  @media (max-width: 900px) {
+    .row-4 { grid-template-columns: repeat(2, 1fr); }
+    .row-2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .row-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 10px;
+  }
+
+  /* ── KPI ── */
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -.5px;
+  }
+  .kpi-sub {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .kpi-sub span { font-weight: 600; }
+  .up   { color: var(--green); }
+  .down { color: var(--red); }
+  .neu  { color: var(--muted); }
+
+  /* ── SPARKBAR ── */
+  .spark {
+    margin-top: 14px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .spark-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .6s ease;
+  }
+
+  /* ── POSICIONES ── */
+  .pos-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+  .pos-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+  }
+  .pos-dir {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .pos-long  { background: rgba(34,197,94,.15);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .pos-short { background: rgba(239,68,68,.15);   color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
+
+  .pos-info { display: flex; flex-direction: column; gap: 3px; }
+  .pos-sym  { font-weight: 700; font-size: 14px; letter-spacing: .3px; }
+  .pos-meta { color: var(--muted); font-size: 11px; }
+  .pos-right { text-align: right; }
+  .pos-entry { font-size: 15px; font-weight: 600; }
+  .pos-sltp  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .pos-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 32px 0;
+    font-size: 12px;
+  }
+
+  /* ── HISTORIAL TABLE ── */
+  .hist-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(37,42,53,.6);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .tp-badge { background: rgba(34,197,94,.15);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .sl-badge { background: rgba(239,68,68,.15);   color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
+  .long-b   { background: rgba(34,197,94,.1);    color: var(--green); }
+  .short-b  { background: rgba(239,68,68,.1);    color: var(--red); }
+
+  /* ── PARES GRID ── */
+  .pares-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .par-chip {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(14,165,233,.1);
+    border: 1px solid rgba(14,165,233,.2);
+    color: var(--accent);
+  }
+  .par-chip.activo {
+    background: rgba(34,197,94,.12);
+    border-color: rgba(34,197,94,.3);
+    color: var(--green);
+  }
+
+  /* ── LOGS ── */
+  .log-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    height: 280px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .log-box::-webkit-scrollbar { width: 4px; }
+  .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .log-line { display: block; white-space: pre-wrap; word-break: break-all; }
+  .log-line.err  { color: var(--red); }
+  .log-line.warn { color: var(--yellow); }
+  .log-line.info { color: var(--text); }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    margin-top: 10px;
+  }
+
+  /* ── REFRESH BTN ── */
+  .btn-refresh {
+    background: rgba(14,165,233,.15);
+    border: 1px solid rgba(14,165,233,.3);
+    color: var(--accent);
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .btn-refresh:hover { background: rgba(14,165,233,.25); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot" id="status-dot"></div>
+    SMC Bot — BingX
+  </div>
+  <div class="header-right">
+    <span id="last-update">Conectando...</span>
+    <span class="cb-badge cb-ok" id="cb-badge">● NORMAL</span>
+    <button class="btn-refresh" onclick="fetchAll()">↻ Actualizar</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPIs -->
+  <div class="row-4">
+    <div class="card">
+      <div class="card-title">Capital Actual</div>
+      <div class="kpi-value" id="kpi-capital">—</div>
+      <div class="kpi-sub">Inicial: <span id="kpi-inicial">—</span></div>
+      <div class="spark"><div class="spark-fill" id="spark-cap" style="background:var(--accent);width:0%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ganancia Total</div>
+      <div class="kpi-value" id="kpi-ganancia">—</div>
+      <div class="kpi-sub" id="kpi-pct">—</div>
+      <div class="spark"><div class="spark-fill" id="spark-gan" style="width:0%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Win Rate</div>
+      <div class="kpi-value" id="kpi-wr">—</div>
+      <div class="kpi-sub">Operaciones: <span id="kpi-ops">—</span></div>
+      <div class="spark"><div class="spark-fill" id="spark-wr" style="background:var(--purple);width:0%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Apalancamiento</div>
+      <div class="kpi-value" id="kpi-lev">—</div>
+      <div class="kpi-sub">Posiciones: <span id="kpi-pos">—</span> / 2</div>
+      <div class="spark"><div class="spark-fill" id="spark-lev" style="background:var(--yellow);width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Posiciones + Pares -->
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title">Posiciones Abiertas</div>
+      <div class="pos-list" id="pos-list">
+        <div class="pos-empty">Cargando...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pares Monitoreados</div>
+      <div class="pares-grid" id="pares-grid">—</div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="card row-1">
+    <div class="card-title">Historial de Operaciones</div>
+    <div class="hist-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Par</th>
+            <th>Dir.</th>
+            <th>Entrada</th>
+            <th>Salida</th>
+            <th>PnL</th>
+            <th>Resultado</th>
+            <th>IA %</th>
+            <th>Capital post</th>
+          </tr>
+        </thead>
+        <tbody id="hist-body">
+          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">Cargando historial...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Logs -->
+  <div class="card row-1">
+    <div class="card-title">Logs del Bot (últimas 100 líneas)</div>
+    <div class="log-box" id="log-box">Cargando logs...</div>
+  </div>
+
+</main>
+
+<footer>
+  SMC Bot v2 · BingX Futuros Perpetuos · Auto-refresh cada 30s
+</footer>
+
+<script>
+const API = "";  // mismo origen — Railway sirve bot + dashboard
+
+async function fetchEstado() {
+  try {
+    const r = await fetch(`${API}/api/estado`);
+    const d = await r.json();
+
+    // Dot
+    document.getElementById("status-dot").className = "logo-dot";
+    document.getElementById("last-update").textContent =
+      "Actualizado: " + new Date(d.timestamp).toLocaleTimeString("es-ES");
+
+    // Circuit Breaker
+    const cb = document.getElementById("cb-badge");
+    if (d.circuit_breaker) {
+      cb.className = "cb-badge cb-warn";
+      cb.textContent = "⚠ CIRCUIT BREAKER";
+    } else {
+      cb.className = "cb-badge cb-ok";
+      cb.textContent = "● NORMAL";
+    }
+
+    // KPIs
+    document.getElementById("kpi-capital").textContent = `$${d.capital.toFixed(2)}`;
+    document.getElementById("kpi-inicial").textContent = `$${d.capital_inicial.toFixed(2)}`;
+
+    const ganEl = document.getElementById("kpi-ganancia");
+    ganEl.textContent = (d.ganancia >= 0 ? "+" : "") + `$${d.ganancia.toFixed(2)}`;
+    ganEl.className = "kpi-value " + (d.ganancia >= 0 ? "up" : "down");
+
+    const pctEl = document.getElementById("kpi-pct");
+    pctEl.innerHTML = `${d.ganancia_pct >= 0 ? "+" : ""}${d.ganancia_pct.toFixed(2)}% vs capital inicial`;
+
+    document.getElementById("kpi-wr").textContent = `${d.win_rate.toFixed(1)}%`;
+    document.getElementById("kpi-wr").className = "kpi-value " +
+      (d.win_rate >= 60 ? "up" : d.win_rate >= 40 ? "neu" : "down");
+    document.getElementById("kpi-ops").textContent =
+      `${d.ops_ganadas}W / ${d.ops_total - d.ops_ganadas}L`;
+
+    document.getElementById("kpi-lev").textContent = `x${d.apalancamiento}`;
+    document.getElementById("kpi-pos").textContent = d.posiciones.length;
+
+    // Sparks
+    const capPct = Math.min((d.capital / (d.capital_inicial * 2)) * 100, 100);
+    document.getElementById("spark-cap").style.width = capPct + "%";
+
+    const ganPct = Math.min(50 + d.ganancia_pct / 2, 100);
+    const sparkGan = document.getElementById("spark-gan");
+    sparkGan.style.width = Math.max(ganPct, 0) + "%";
+    sparkGan.style.background = d.ganancia >= 0 ? "var(--green)" : "var(--red)";
+
+    document.getElementById("spark-wr").style.width = d.win_rate + "%";
+    document.getElementById("spark-lev").style.width =
+      Math.min((d.apalancamiento / 20) * 100, 100) + "%";
+
+    // Posiciones
+    const posEl = document.getElementById("pos-list");
+    if (d.posiciones.length === 0) {
+      posEl.innerHTML = `<div class="pos-empty">Sin posiciones abiertas</div>`;
+    } else {
+      posEl.innerHTML = d.posiciones.map(p => {
+        const cls  = p.dir === "LONG" ? "pos-long" : "pos-short";
+        const ts   = new Date(p.ts).toLocaleString("es-ES", { dateStyle:"short", timeStyle:"short" });
+        return `
+          <div class="pos-card">
+            <div class="pos-dir ${cls}">${p.dir}</div>
+            <div class="pos-info">
+              <div class="pos-sym">${p.sym || p.simbolo}</div>
+              <div class="pos-meta">⚡ x${d.apalancamiento} · ${ts} · IA ${p.confianza_ia || 0}%</div>
+            </div>
+            <div class="pos-right">
+              <div class="pos-entry">$${Number(p.entrada).toFixed(4)}</div>
+              <div class="pos-sltp">
+                SL $${Number(p.sl).toFixed(4)} · TP $${Number(p.tp).toFixed(4)}
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    // Pares
+    const todos = [
+      "SOL-USDT","ETH-USDT","BTC-USDT","BNB-USDT","AVAX-USDT",
+      "LINK-USDT","ARB-USDT","OP-USDT","INJ-USDT"
+    ];
+    document.getElementById("pares-grid").innerHTML = todos.map(p => {
+      const on = d.pares_activos.includes(p);
+      return `<div class="par-chip ${on ? "activo" : ""}">${p}</div>`;
+    }).join("");
+
+  } catch (e) {
+    document.getElementById("status-dot").className = "logo-dot offline";
+    document.getElementById("last-update").textContent = "Sin conexión con el bot";
+    console.error("API estado:", e);
+  }
+}
+
+async function fetchHistorial() {
+  try {
+    const r = await fetch(`${API}/api/historial`);
+    const hist = await r.json();
+    const tbody = document.getElementById("hist-body");
+
+    if (!hist.length) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">Sin operaciones aún</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = [...hist].reverse().map(h => {
+      const pnlCls = h.pnl >= 0 ? "up" : "down";
+      const pnlStr = (h.pnl >= 0 ? "+" : "") + "$" + h.pnl.toFixed(2);
+      const resCls = h.resultado === "TP" ? "tp-badge" : "sl-badge";
+      const dirCls = h.direccion === "LONG" ? "long-b" : "short-b";
+      const ts = new Date(h.timestamp).toLocaleString("es-ES",
+        { dateStyle:"short", timeStyle:"short" });
+      return `
+        <tr>
+          <td>${ts}</td>
+          <td><b>${h.simbolo}</b></td>
+          <td><span class="badge ${dirCls}">${h.direccion}</span></td>
+          <td>$${Number(h.entrada).toFixed(4)}</td>
+          <td>$${Number(h.salida).toFixed(4)}</td>
+          <td class="${pnlCls}" style="font-weight:600">${pnlStr}</td>
+          <td><span class="badge ${resCls}">${h.resultado}</span></td>
+          <td>${h.confianza_ia}%</td>
+          <td>$${h.capital_post.toFixed(2)}</td>
+        </tr>`;
+    }).join("");
+  } catch (e) {
+    console.error("API historial:", e);
+  }
+}
+
+async function fetchLogs() {
+  try {
+    const r = await fetch(`${API}/api/logs`);
+    const d = await r.json();
+    const box = document.getElementById("log-box");
+    box.innerHTML = (d.logs || []).map(l => {
+      let cls = "info";
+      if (l.includes("| ERROR |")) cls = "err";
+      else if (l.includes("| WARNING |")) cls = "warn";
+      return `<span class="log-line ${cls}">${escHtml(l.trim())}</span>`;
+    }).join("\n");
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    console.error("API logs:", e);
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+async function fetchAll() {
+  await Promise.all([fetchEstado(), fetchHistorial(), fetchLogs()]);
+}
+
+// Inicial + auto-refresh cada 30 segundos
+fetchAll();
+setInterval(fetchAll, 30000);
+</script>
+</body>
+</html>
